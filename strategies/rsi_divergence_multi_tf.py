@@ -1,7 +1,7 @@
 # strategies/rsi_divergence_multi_tf.py
 import pandas as pd
 
-from config.settings import RSI_DIVERGENCE_MULTI_TF_STRATEGY_CONFIG
+from config.rsi_divergence import RSI_DIVERGENCE_MULTI_TF_STRATEGY_CONFIG
 from indicators.rsi import compute_rsi
 from utils.data_fetcher import fetch_ohlcv
 
@@ -20,6 +20,101 @@ def detect_divergence(df: pd.DataFrame):
     return signals
 
 
+"""
+🎯 Mục tiêu
+
+Bắt phân kỳ RSI khung nhỏ (ví dụ 1h) nhưng được khung lớn (ví dụ 4h) xác nhận xu hướng và động lượng.
+Hỗ trợ multi-timeframe (các cặp: ("15m","1h"), ("1h","4h"), ("4h","1d")).
+
+⚙️ Bộ tiêu chí RSI Divergence đa khung
+Thành phần	Mô tả	Mục tiêu
+1️⃣ Khung nhỏ (entry)	RSI phân kỳ rõ ràng giữa giá và RSI	Tìm điểm đảo chiều tiềm năng
+2️⃣ Khung lớn (confirmation)	EMA(50) hoặc EMA(20) dốc theo hướng phân kỳ, và RSI 4h hỗ trợ	Xác nhận động lượng cùng hướng
+3️⃣ Quản lý hiệu lực tín hiệu	Tín hiệu hết hiệu lực nếu quá 10 nến hoặc đạt 2R	Loại bỏ tín hiệu quá cũ hoặc đã hoàn tất sóng
+4️⃣ Trọng số tín hiệu (độ mạnh)	Dựa trên 2 khung RSI + EMA trend khung lớn	Phân loại tín hiệu mạnh/yếu
+📈 1. Điều kiện RSI Divergence (khung nhỏ)
+
+Bullish Divergence (phân kỳ tăng):
+
+Giá tạo lower low, RSI tạo higher low
+
+RSI hiện tại > 30 (thoát vùng quá bán)
+
+Xu hướng khung lớn ủng hộ (EMA hoặc RSI)
+
+Bearish Divergence (phân kỳ giảm):
+
+Giá tạo higher high, RSI tạo lower high
+
+RSI hiện tại < 70 (thoát vùng quá mua)
+
+Xu hướng khung lớn ủng hộ
+
+🧭 2. Xác định xu hướng khung lớn bằng EMA linh hoạt (EMA slope)
+
+Thay vì chỉ xét “giá nằm trên/dưới EMA”, ta xét độ dốc EMA trong 5 cây nến gần nhất:
+
+ema_slope = ema[-1] - ema[-5]
+if ema_slope > 0: trend = "up"
+elif ema_slope < 0: trend = "down"
+else: trend = "sideways"
+
+
+✅ Ưu điểm:
+
+Nhận biết thay đổi sớm
+
+Giảm nhiễu khi giá dao động quanh EMA
+
+Linh hoạt giữa EMA(20) và EMA(50) tùy khung
+
+🔁 3. Kết hợp RSI đa khung (multi-timeframe confirmation)
+Trạng thái	Điều kiện	Độ mạnh
+Strong Buy	1h có bullish divergence + RSI(4h) đang dưới 40 và EMA(4h) dốc lên	⭐⭐⭐
+Moderate Buy	1h có bullish divergence + RSI(4h) nằm giữa 40–60 + EMA(4h) đi ngang	⭐⭐
+Weak Buy	1h có bullish divergence + RSI(4h) > 60 (quá cao) hoặc EMA(4h) giảm nhẹ	⭐
+
+Tương tự cho Sell, chỉ đảo ngược điều kiện (RSI cao → thấp, EMA dốc xuống).
+
+🧩 4. Cấu trúc tổng thể của chiến lược
+
+Quét RSI phân kỳ ở khung nhỏ (1h)
+
+Lấy dữ liệu khung lớn (4h):
+
+EMA(20), EMA(50)
+
+RSI(14)
+
+Tính độ dốc EMA → xác định hướng trend
+
+Xếp hạng tín hiệu dựa trên độ đồng thuận
+
+Loại tín hiệu nếu:
+
+Quá 10 cây nến
+
+Đã đạt ≥ 2R kể từ entry
+
+📊 5. Ví dụ thực tế
+🟢 Bullish divergence mạnh
+
+RSI(1h): phân kỳ tăng, RSI = 35 → 50
+
+EMA(4h): dốc lên
+
+RSI(4h): = 38 (vùng thấp)
+➡️ Xếp loại: Strong Buy
+
+🔴 Bearish divergence yếu
+
+RSI(1h): phân kỳ giảm, RSI = 65 → 55
+
+EMA(4h): vẫn dốc lên
+
+RSI(4h): = 65 (vùng cao)
+➡️ Xếp loại: Weak Sell
+"""
 class RsiDivergenceMultiTF:
     def __init__(self, exchange, lower_tf="1h", higher_tf="4h", expiry_behavior="penalize_expired", expiry_limit=10):
         cfg = RSI_DIVERGENCE_MULTI_TF_STRATEGY_CONFIG
