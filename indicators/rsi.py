@@ -15,7 +15,7 @@ def compute_rsi(series, period=14):
     return 100 - (100 / (1 + rs))
 
 
-def compute_rsi(series: pd.Series, length: int = 14) -> pd.Series:
+def compute_rsi_v2(series: pd.Series, length: int = 14) -> pd.Series:
     """
     Compute RSI using Wilder's smoothing.
     Returns pd.Series aligned with input series.

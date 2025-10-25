@@ -3,7 +3,7 @@ import time
 from typing import Optional, Dict
 
 from config.rsi_confluence import RSI_CONFLUENCE_CONFIG
-from indicators.rsi import compute_rsi
+from indicators.rsi import compute_rsi_v2
 from utils.data_fetcher import _ohlcv_to_df, _safe_fetch_ohlcv, _aggregate_n_days_to_n_days
 
 
@@ -30,7 +30,7 @@ def analyze_symbol(exchange, symbol: str, rate_limit_sleep: float = None) -> Opt
                 rsi_values[tf] = None
                 continue
             df = _ohlcv_to_df(ohlcv)
-            rsi = compute_rsi(df['close'], RSI_CONFLUENCE_CONFIG["rsi_length"]).iloc[-1]
+            rsi = compute_rsi_v2(df['close'], RSI_CONFLUENCE_CONFIG["rsi_length"]).iloc[-1]
             rsi_values[tf] = float(round(rsi, 2))
             if rsi <= RSI_CONFLUENCE_CONFIG["rsi_long_threshold"]:
                 match_count_long += 1
@@ -48,7 +48,7 @@ def analyze_symbol(exchange, symbol: str, rate_limit_sleep: float = None) -> Opt
 
         if ohlcv_3d and len(ohlcv_3d) >= RSI_CONFLUENCE_CONFIG["rsi_length"]:
             df3 = _ohlcv_to_df(ohlcv_3d)
-            tf_3d_value = float(round(compute_rsi(df3['close'], RSI_CONFLUENCE_CONFIG["rsi_length"]).iloc[-1], 2))
+            tf_3d_value = float(round(compute_rsi_v2(df3['close'], RSI_CONFLUENCE_CONFIG["rsi_length"]).iloc[-1], 2))
         else:
             ohlcv_1d = _safe_fetch_ohlcv(exchange, symbol, timeframe='1d',
                                          limit=(RSI_CONFLUENCE_CONFIG["rsi_length"] + 5) * 3)
@@ -56,7 +56,7 @@ def analyze_symbol(exchange, symbol: str, rate_limit_sleep: float = None) -> Opt
                 df1d = _ohlcv_to_df(ohlcv_1d)
                 df3d = _aggregate_n_days_to_n_days(df1d, n_days=3)
                 if len(df3d) >= RSI_CONFLUENCE_CONFIG["rsi_length"]:
-                    tf_3d_value = float(round(compute_rsi(df3d['close'], RSI_CONFLUENCE_CONFIG["rsi_length"]).iloc[-1], 2))
+                    tf_3d_value = float(round(compute_rsi_v2(df3d['close'], RSI_CONFLUENCE_CONFIG["rsi_length"]).iloc[-1], 2))
 
         rsi_values['3d'] = tf_3d_value
         if tf_3d_value is not None:
