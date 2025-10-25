@@ -1,4 +1,5 @@
 import pandas as pd
+
 from indicators.rsi import compute_rsi
 from utils.data_fetcher import fetch_ohlcv
 

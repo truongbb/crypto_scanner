@@ -1,11 +1,11 @@
 # main.py
 import concurrent.futures
-from collections import defaultdict
 
 from config.settings import RSI_DIVERGENCE_MULTI_TF_STRATEGY_CONFIG
 from strategies.rsi_divergence_multi_tf import RsiDivergenceMultiTF
 from utils.market_selector import get_top_binance_symbols
 from utils.print_signals import print_top_signals
+
 
 def process_symbol_wrapper(exchange, symbol, strategy):
     """
@@ -62,7 +62,8 @@ def main():
     for lower_tf, higher_tf in tf_pairs:
         print(f"\n🔎 Quét cặp khung: {lower_tf} → {higher_tf} (multithread)...")
         strategy = RsiDivergenceMultiTF(exchange, lower_tf=lower_tf, higher_tf=higher_tf,
-                                        expiry_behavior=RSI_DIVERGENCE_MULTI_TF_STRATEGY_CONFIG.get("expiry_behavior", "penalize_expired"),
+                                        expiry_behavior=RSI_DIVERGENCE_MULTI_TF_STRATEGY_CONFIG.get("expiry_behavior",
+                                                                                                    "penalize_expired"),
                                         expiry_limit=RSI_DIVERGENCE_MULTI_TF_STRATEGY_CONFIG.get("expiry_limit", 10))
 
         # đa luồng quét symbols cho cặp timeframe hiện tại
